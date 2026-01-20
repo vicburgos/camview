@@ -23,7 +23,8 @@ if (root.classList.contains("cam-view")) {
     const start  = root.getAttribute("start-utc");
     const end    = root.getAttribute("end-utc");
     const useUTC = root.getAttribute("use-utc") === "true";
-    App(camara, start, end, useUTC, root).catch(error => {
+    const debug  = root.getAttribute("debug") === "true";
+    App(camara, start, end, useUTC, debug, root).catch(error => {
         console.error("Error starting app:", error);
         root.innerHTML = error;
     });

@@ -138,6 +138,7 @@ export default async function WrapperApp(root) {
         const start  = root.getAttribute("start-utc");
         const end    = root.getAttribute("end-utc");
         const useUTC = root.getAttribute("use-utc") === "true";
+        const debug  = root.getAttribute("debug") === "true";
 
         // Agregar al header el nombre la camra y la opción de volver atras
         const camara_human = root.getAttribute('cam-availables-human')?.split(" ")[camAvailable.indexOf(selectedCamera)] || selectedCamera;
@@ -153,6 +154,6 @@ export default async function WrapperApp(root) {
         header.querySelector(".d-flex.justify-content-between").appendChild(backBtn);
 
 
-        App(selectedCamera, start, end, useUTC, appsContainer);
+        App(selectedCamera, start, end, useUTC, debug, appsContainer);
     });
 }

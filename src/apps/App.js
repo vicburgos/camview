@@ -11,7 +11,7 @@ import LoadingView from "../views/LoadingView.js";
 import TabPanel from "../views/TabPanel.js";
 import FilterOptionsView from "../views/FilterOptionsView.js";
 
-export default async function App(camara, start, end, useUTC, root) {
+export default async function App(camara, start, end, useUTC, debug, root) {
     /* 
       Arranque de la aplicación
     */
@@ -69,6 +69,7 @@ export default async function App(camara, start, end, useUTC, root) {
     videoWrapper.id = "video-wrapper";
     const videoWrapperHeight = 65;
     Object.assign(videoWrapper.style, {
+        position: 'relative',
         height: `${videoWrapperHeight}%`,
         width: '100%',
         overflow: 'hidden',
@@ -153,8 +154,20 @@ export default async function App(camara, start, end, useUTC, root) {
     }
     requestAnimationFrame(renderLoop);
 
-    if (useUTC) {
 
+    // En estado oculto
+    const videoContainer = document.createElement('div');
+    videoContainer.style.position = 'absolute';
+    videoContainer.style.bottom = '0';
+    videoContainer.style.right = '0';
+    videoContainer.style.width = '1px';
+    videoContainer.style.display = 'flex';
+    videoContainer.style.flexDirection = 'column';
+    videoWrapper.appendChild(videoContainer);
+    videoContainer.appendChild(videoINP.video);
+    videoContainer.appendChild(videoGS.video);
+
+    if (debug) {
         /*
           Screen de informacion
         */
@@ -174,6 +187,7 @@ export default async function App(camara, start, end, useUTC, root) {
             'loadedmetadata', () => infoView.update()
         );
 
+        videoContainer.style.width = '250px';
     }
 
     /*
