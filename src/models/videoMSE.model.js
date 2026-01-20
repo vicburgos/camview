@@ -75,7 +75,7 @@ export default class videoMSE {
 
   async loadPlaceholder() {
     try {
-      const response = await fetch('/placeholder-chunk.mp4');
+      const response = await fetch('/media/camview/placeholder-chunk.mp4');
       this.placeholderBuffer = await response.arrayBuffer();
     } catch (err) {
       console.warn('the chunk placeholder is not available:', err.message);

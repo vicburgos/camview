@@ -51,10 +51,10 @@ export class VideoCanvasController {
     // Renderizar frame actual
     render() {
         try {
-            const baseVideo = this.videosMSEList[0].video;
-            if (baseVideo.readyState < baseVideo.HAVE_CURRENT_DATA) {
-                return;
-            }
+            // const baseVideo = this.videosMSEList[0].video;
+            // if (baseVideo.readyState < baseVideo.HAVE_CURRENT_DATA) {
+            //     return;
+            // }
             
             // Delegar rendering al filtro activo
             this.activeFilter.apply(this.ctx, this.canvas);
@@ -326,7 +326,9 @@ class ContourFaceFilter {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(baseVideo, 0, 0, canvas.width, canvas.height);
         
-        if (videoGS.readyState < videoGS.HAVE_CURRENT_DATA) return;
+        // Si el video secundario no esta listo, no dibujar contornos
+        if (videoGS.onPlaceholder()) return;
+        // if (videoGS.video.readyState < videoGS.video.HAVE_CURRENT_DATA) return;
         
         const { width, height } = canvas;
         const { blur, alpha, downSampleContourFaceFilter } = this.controller.config;

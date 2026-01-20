@@ -60,7 +60,7 @@ export default async function WrapperApp(root) {
         card.style.transition = "all 0.3s ease";
         card.dataset.camera = camara;
         
-        const camara_human = root.getAttribute('cam-availables-human')?.split(" ")[index];
+        const camara_human = root.getAttribute('cam-availables-human')?.split(" ")[index] || camara;
         card.innerHTML = `
             <div class="card-body text-center py-4">
                 <div class="mb-1">
@@ -140,7 +140,7 @@ export default async function WrapperApp(root) {
         const useUTC = root.getAttribute("use-utc") === "true";
 
         // Agregar al header el nombre la camra y la opción de volver atras
-        const camara_human = root.getAttribute('cam-availables-human')?.split(" ")[camAvailable.indexOf(selectedCamera)];
+        const camara_human = root.getAttribute('cam-availables-human')?.split(" ")[camAvailable.indexOf(selectedCamera)] || selectedCamera;
         header.querySelector("h1").textContent = camara_human? `DustCam - ${camara_human.split('_').join(' ')}`: "DustCam";
         const backBtn = document.createElement("button");
         backBtn.style.fontSize = "0.7rem";
