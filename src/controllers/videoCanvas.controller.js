@@ -320,12 +320,12 @@ class ContourFaceFilter {
     
     apply(ctx, canvas) {
         const baseVideo = this.controller.videosMSEList[0].video;
-        const videoGS = this.controller.videosMSEList[1].video;
+        const videoGS = this.controller.videosMSEList[1];
         
         // Dibujar video base primero
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(baseVideo, 0, 0, canvas.width, canvas.height);
-        
+
         // Si el video secundario no esta listo, no dibujar contornos
         if (videoGS.onPlaceholder()) return;
         // if (videoGS.video.readyState < videoGS.video.HAVE_CURRENT_DATA) return;
@@ -350,7 +350,7 @@ class ContourFaceFilter {
         // Limpiar y dibujar
         offCtx.clearRect(0, 0, w, h);
         offCtx.filter = `blur(${blur}px)`;
-        offCtx.drawImage(videoGS, 0, 0, w, h);
+        offCtx.drawImage(videoGS.video, 0, 0, w, h);
         
         // Aplicar colormap
         const imageData = offCtx.getImageData(0, 0, w, h);
