@@ -107,10 +107,6 @@ export class GeometryController {
     }
 
     updatePoint(id, x, y) {
-        // Remover del chart
-        if (this.chartController) {
-            this.chartController.removeSeries(id);
-        }
         const geometry = this.model.getGeometry(id);
         if (!geometry) return;
         
@@ -125,6 +121,11 @@ export class GeometryController {
         // Solo actualizar si la distancia es significativa (más de 0.5% del tamaño)
         if (distance < 0.005) {
             return;
+        }
+
+        // Remover del chart
+        if (this.chartController) {
+            this.chartController.removeSeries(id);
         }
         
         this.model.updatePoint(id, x, y);
