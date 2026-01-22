@@ -378,8 +378,6 @@ export async function buildConfig(camara, start, end, useUTC, manifest, initialT
                 camara,
                 defaultSeries.x,
                 defaultSeries.y,
-                startDate,
-                endDate
             );
             
             if (seriesData && seriesData.data) {

@@ -10,14 +10,12 @@ export async function fetchManifest(camara) {
     }
 }
 
-export async function fetchSeries(camara, x, y, startDate, endDate) {
+export async function fetchSeries(camara, x, y) {
     try {
         const params = new URLSearchParams({
             cam: camara,
             x: x.toFixed(4),
             y: y.toFixed(4),
-            start: startDate.toISOString(),
-            end: endDate.toISOString()
         });
         
         const response = await fetch(`/camview/series?${params}`);
