@@ -1636,7 +1636,6 @@ class videoMSE {
               const finalPlaceholderCopies = 20;
               const lastChunkInfo = this.videoChunksList[chunkIndex];
               const finalOffset = lastChunkInfo.timestampOffset + lastChunkInfo.durationSeconds;
-              console.log(`Insertando placeholder final de ${finalPlaceholderCopies} copias`);
               for (let i = 0; i < finalPlaceholderCopies; i++) {
                 const offset = finalOffset + i * this.placeholderDuration - this.timeOffsetAdjustment;
                 this.sourceBuffer.timestampOffset = offset;

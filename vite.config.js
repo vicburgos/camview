@@ -10,8 +10,8 @@ export default defineConfig({
         visor: './index.html'
       },
       output: {
-        entryFileNames: 'static/camview_1.js',
-        assetFileNames: 'static/camview_1.css',
+        entryFileNames: 'static/camview_lite_1.js',
+        assetFileNames: 'static/camview_lite_1.css',
       }
     }
   },
