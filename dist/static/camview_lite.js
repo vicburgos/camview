@@ -278,7 +278,7 @@ class ContourFilterConfig {
     this.blur = 2;
     this.downSampleContourLineFilter = 3;
     this.downSampleContourFaceFilter = 1;
-    this.lineWidth = 1.5;
+    this.lineWidth = 1;
   }
   // Getter y setter para alpha con clamp 0-1
   get alpha() {

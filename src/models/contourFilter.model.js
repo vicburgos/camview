@@ -10,7 +10,7 @@ export class ContourFilterConfig {
         this.blur = 2;
         this.downSampleContourLineFilter = 3;
         this.downSampleContourFaceFilter = 1;
-        this.lineWidth = 1.5; // Solo para ContourLineFilter
+        this.lineWidth = 1; // Solo para ContourLineFilter
     }
 
     // Getter y setter para alpha con clamp 0-1

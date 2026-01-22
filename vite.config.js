@@ -10,13 +10,13 @@ export default defineConfig({
         visor: './index.html'
       },
       output: {
-        entryFileNames: 'static/camview_lite_1.js',
-        assetFileNames: 'static/camview_lite_1.css',
+        entryFileNames: 'static/camview_lite.js',
+        assetFileNames: 'static/camview_lite.css',
       }
     }
   },
   server: {
-    port: 5003,
+    port: 5004,
     proxy: {
       '/camview': {
         target: 'http://dustvisionai.meteodata.cl:8002',
