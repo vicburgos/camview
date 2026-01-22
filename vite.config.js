@@ -16,7 +16,7 @@ export default defineConfig({
     }
   },
   server: {
-    port: 5002,
+    port: 5003,
     proxy: {
       '/camview': {
         target: 'http://dustvisionai.meteodata.cl:8002',
@@ -55,7 +55,7 @@ export default defineConfig({
             // }
             
             // // Simular fallo HTTP 500 para otro chunk
-            // if (req.url.includes('CAM_E04_20260105_121000')) {
+            // if (req.url.includes('20260120_225000.DustNet20250929.inp')) {
             //   console.log('Simulando fallo HTTP 500 para:', req.url);
             //   proxyReq.destroy();
             //   res.statusCode = 500;

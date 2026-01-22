@@ -1,5 +1,11 @@
 import App from "./apps/App.js";
+import CamView from "./apps/CamView.js";
 import WrapperApp from "./apps/WrapperApp.js";
+
+// Expose apps to global scope for embedding
+window.CamView = CamView;
+window.App = App;
+window.WrapperApp = WrapperApp;
 
 // Initialize app
 const root = document.getElementById("root-app");
@@ -17,7 +23,7 @@ const error = `
         Error en la inicialización de la app
     </h2>
 `;
-if (root.classList.contains("cam-view")) {
+if (root?.classList.contains("cam-view")) {
     // Parse attributes
     const camara = root.getAttribute("camara");
     const start  = root.getAttribute("start-utc");
@@ -30,7 +36,7 @@ if (root.classList.contains("cam-view")) {
     });
 }
 
-if (root.classList.contains("wrapper")) {
+if (root?.classList.contains("wrapper")) {
     WrapperApp(root).catch(error => {
         console.error("Error starting wrapper app:", error);
         root.innerHTML = error;

@@ -41,8 +41,8 @@ export class VideoCanvasController {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
                
-        canvas.width = 1920*0.75;
-        canvas.height = 1080*0.75;
+        canvas.width = 1920*0.7;
+        canvas.height = 1080*0.7;
 
         this.canvas = canvas;
         this.ctx = ctx;
@@ -51,10 +51,10 @@ export class VideoCanvasController {
     // Renderizar frame actual
     render() {
         try {
-            // const baseVideo = this.videosMSEList[0].video;
-            // if (baseVideo.readyState < baseVideo.HAVE_CURRENT_DATA) {
-            //     return;
-            // }
+            const baseVideo = this.videosMSEList[0].video;
+            if (baseVideo.readyState < baseVideo.HAVE_CURRENT_DATA) {
+                return;
+            }
             
             // Delegar rendering al filtro activo
             this.activeFilter.apply(this.ctx, this.canvas);
@@ -69,8 +69,18 @@ export class VideoCanvasController {
     }
     
     // Activar/desactivar filtros
-    setFilter(filter) {
+    setFilter(filter, options=null) {
         this.activeFilter = filter;
+        // Aplicar opciones si existen
+        if (options) {
+            if (options.opacity !== undefined) this.setAlpha(options.opacity);
+            if (options.levels !== undefined) this.setLevels(options.levels);
+            if (options.minLevel !== undefined) this.setMinLevel(options.minLevel);
+            if (options.maxLevel !== undefined) this.setMaxLevel(options.maxLevel);
+            if (options.colorMapId !== undefined) this.setColorMap(options.colorMapId);
+            if (options.blur !== undefined) this.setBlur(options.blur);
+            if (options.lineWidth !== undefined) this.setLineWidth(options.lineWidth);
+        }
         return this;
     }
     

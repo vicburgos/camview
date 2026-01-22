@@ -94,14 +94,6 @@ export class ChartController {
                     'domingo', 'lunes', 'martes', 'miércoles', 
                     'jueves', 'viernes', 'sábado'
                 ],
-                loading: 'Cargando...',
-                resetZoom: 'Reiniciar zoom',
-                resetZoomTitle: 'Reiniciar zoom nivel 1:1',
-                thousandsSep: '.',
-                decimalPoint: ',',
-                rangeSelectorZoom: 'Período',
-                rangeSelectorFrom: 'Desde',
-                rangeSelectorTo: 'Hasta'
             },
             time: { useUTC: CONFIG.useUTC },
             chart: {
@@ -245,14 +237,12 @@ export class ChartController {
         this.chart.xAxis[0].setExtremes(
             zoom.start.getTime(), zoom.end.getTime()
         );
+        this.setupInteraction();
 
         // Generar serie dummy
         this.addDummySeries();
-
-        // Posicionar cursor al inicio del zoom (desde CONFIG.initialTime)
         this.updateCursor(CONFIG.initialTime);
-        this.setupInteraction();
-
+        
         return this.chart;
     }
 
@@ -281,7 +271,7 @@ export class ChartController {
         const optionsCursor = {
             value,
             color: colorCursor,
-            width: 3,
+            width: 5,
             zIndex: 5,
         };
 
@@ -372,7 +362,8 @@ export class ChartController {
 
         if (!cursor && cursor !== 0) return;
 
-        const range = Math.round((this.config.zoomEnd - this.config.zoomStart));
+        // const range = Math.round((this.config.zoomEnd - this.config.zoomStart));
+        const range = 12 * 60 * 60 * 1000; 
 
         let newMin = cursor - range;
         let newMax = cursor + range;

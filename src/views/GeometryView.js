@@ -138,20 +138,17 @@ export default function GeometryView({ geometryController, canvasElement }) {
             }
         }
 
-        // Remover punto existente si hay uno (esto tambien remueve la serie del chart)
+        // Remover punto existente si hay uno (esto también remueve la serie del chart)
         if (currentPoint) {
             geometryController.removeGeometry(currentPoint.id);
             currentPoint = null;
         }
 
-        // Crear nuevo punto
-        geometryController.addPoint(x, y, '#ff0000').then(geometry => {
+        // Crear nuevo punto - el color por defecto es manejado por el controlador
+        geometryController.addPoint(x, y).then(geometry => {
             if (geometry) {
                 currentPoint = geometry;
                 renderPoint(geometry);
-            } else {
-                // Si ya hay otro punto, remover este inmediatamente
-                geometryController.removeGeometry(geometry.id);
             }
         });
     });
@@ -256,6 +253,7 @@ export default function GeometryView({ geometryController, canvasElement }) {
     // Escuchar cambios en el modelo
     geometryController.getModel().onChange((event, geometry) => {
         if (event === 'add' || event === 'update') {
+            currentPoint = geometry; // Actualizar currentPoint con la geometría del modelo
             renderPoint(geometry);
         } else if (event === 'remove' || event === 'clear') {
             while (svg.firstChild) {

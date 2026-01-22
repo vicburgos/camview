@@ -31,6 +31,8 @@ export default function InfoView({ videoController, videoMSE, config }) {
             <div><strong>Loading:</strong> ${videoController.isLoading}</div>
             <div><strong>Playing:</strong> ${videoController.isPlaying}</div>
             <div><strong>Seeking:</strong> ${videoController.isSeeking}</div>
+            <div><strong>Current Time:</strong> ${videoMSE.video.currentTime.toFixed(2)} s</div>
+            <div><strong>Duration:</strong> ${videoMSE.video.duration.toFixed(2)} s</div>
         `;
     }
     

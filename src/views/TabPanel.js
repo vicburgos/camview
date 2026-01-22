@@ -84,6 +84,14 @@ export default function TabPanel(options = {}) {
         toggleBtn.onclick = toggle;
         wrapperHeader.appendChild(toggleBtn);
 
+        // Si la ventana es pequeña, hacer collapsable
+        window.addEventListener('resize', () => {
+            if (window.innerWidth < 800 && !collapsed) {
+                collapsed = true;
+                renderHeader();
+            }
+        });
+
         // Tabs usando Nav de Bootstrap
         const nav = document.createElement("ul");
         nav.className = "nav nav-tabs";

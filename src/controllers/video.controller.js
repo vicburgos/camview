@@ -6,33 +6,34 @@ export class VideoController {
         if (!videos || videos.length === 0) {
             throw new Error('VideoController requires at least one video');
         }
-        
+
         this.videosMSEList = videos;
         this.masterVideo = videos[0].video; // El primer video es el maestro
         this.slaveVideos = videos.slice(1).map(v => v.video); // Los demás son esclavos
-        
+
         this.fps = videos[0]?.metadata?.fps || 10;
-        this.syncThreshold = 1 / (this.fps*2); // 1 frame de tolerancia
-        
+        this.syncThreshold = 1 / (this.fps * 2); // 1 frame de tolerancia
+
         // Estados
         this.isPlaying = false;
         this.isLoading = false;
         this.isSeeking = false;
         this.wasPlayingBeforeSeek = false;
-        
+
         // Listeners para eventos
         this.loadingListeners = [];
         this.playingListeners = [];
         this.seekingListeners = [];
-        
+        this.endVideoListeners = [];
+
         this.init();
     }
-    
+
     // Agregar listener para cambios de loading
     onLoadingChange(callback) {
         this.loadingListeners.push(callback);
     }
-    
+
     // Emitir evento de loading
     emitLoadingChange(isLoading) {
         this.loadingListeners.forEach(listener => listener(isLoading));
@@ -56,15 +57,22 @@ export class VideoController {
     emitSeekingChange(isSeeking) {
         this.seekingListeners.forEach(listener => listener(isSeeking));
     }
-    
+
+    onEndVideo(callback) {
+        this.endVideoListeners.push(callback);
+    }
+    emitEndVideo() {
+        this.endVideoListeners.forEach(listener => listener());
+    }
+
     init() {
         // Solo el maestro tiene listeners de control
         this.setupMasterListeners();
-        
+
         // Loop de sincronización simple
         this.syncInterval = setInterval(() => this.syncLoop(), 100);
     }
-    
+
     setupMasterListeners() {
         // Play/Pause
         this.masterVideo.addEventListener('play', () => {
@@ -75,7 +83,7 @@ export class VideoController {
             }
             this.playSlaves();
         });
-        
+
         this.masterVideo.addEventListener('pause', () => {
             // No cambiar isPlaying si:
             // 1. Está en seeking (pausa automática del navegador)
@@ -89,25 +97,25 @@ export class VideoController {
                 this.pauseSlaves();
             }
         });
-        
+
         // Seeking
         this.masterVideo.addEventListener('seeking', () => {
             this.isSeeking = true;
             this.wasPlayingBeforeSeek = this.isPlaying;
             this.emitSeekingChange(true);
         });
-        
+
         this.masterVideo.addEventListener('seeked', () => {
             this.isSeeking = false;
             this.emitSeekingChange(false);
             this.syncSlaves();
-            
+
             // Reanudar si estaba reproduciendo
             if (this.wasPlayingBeforeSeek) {
                 // Actualizar isPlaying ANTES de intentar reproducir
                 // para que si entra en buffering, sepa que debe reanudar
                 this.isPlaying = true;
-                
+
                 setTimeout(() => {
                     if (!this.isSeeking && this.wasPlayingBeforeSeek) {
                         this.masterVideo.play().catch(err => {
@@ -117,57 +125,74 @@ export class VideoController {
                 }, 100);
             }
         });
-        
+
         // Rate change
         this.masterVideo.addEventListener('ratechange', () => {
             this.syncRate();
         });
-        
+
         this.masterVideo.addEventListener('canplay', () => {
             this.checkAndResume();
         });
-        
+
         this.masterVideo.addEventListener('playing', () => {
             this.checkAndResume();
         });
     }
-    
+
     syncLoop() {
         // Verificar loading en todos los videos
         this.updateLoadingState();
-        
+
         // Si hay loading, pausar todos
         if (this.isLoading) {
             this.pauseAll();
             return;
         }
-        
+
         // Sincronizar esclavos al maestro
         this.syncSlaves();
     }
-    
+
     updateLoadingState() {
+        // TODO (Problem last frames): En el final, no permitir loading
+        const isAtEnd = this.masterVideo.currentTime >= this.videosMSEList[0].duration - 2/ this.fps;
+
+        if (isAtEnd) {
+            if (this.isPlaying) {
+                this.emitEndVideo();
+            }
+            // const wasLoading = this.isLoading;
+            // this.isLoading = false;
+
+            // // Emitir evento si cambió el estado
+            // if (wasLoading) {
+            //     this.emitLoadingChange(false);
+            // }
+            // return;
+        }
+
         const anyLoading = [this.masterVideo, ...this.slaveVideos].some(video => {
             return video.readyState < 3; // HAVE_FUTURE_DATA
         });
-        
+
         const wasLoading = this.isLoading;
         this.isLoading = anyLoading;
-        
+
         // Emitir evento si cambió el estado
         if (wasLoading !== anyLoading) {
             this.emitLoadingChange(anyLoading);
         }
-        
+
         // Si dejó de cargar y debería reproducir, reanudar
         if (wasLoading && !anyLoading && this.isPlaying) {
             this.resumeAll();
         }
     }
-    
+
     syncSlaves() {
         const masterTime = this.masterVideo.currentTime;
-        
+
         this.slaveVideos.forEach(video => {
             const timeDiff = Math.abs(video.currentTime - masterTime);
             if (timeDiff > this.syncThreshold) {
@@ -175,7 +200,7 @@ export class VideoController {
             }
         });
     }
-    
+
     syncRate() {
         const masterRate = this.masterVideo.playbackRate;
         this.slaveVideos.forEach(video => {
@@ -184,7 +209,7 @@ export class VideoController {
             }
         });
     }
-    
+
     playSlaves() {
         this.slaveVideos.forEach(video => {
             if (video.paused && !this.isLoading) {
@@ -199,7 +224,7 @@ export class VideoController {
             }
         });
     }
-    
+
     pauseSlaves() {
         this.slaveVideos.forEach(video => {
             if (!video.paused) {
@@ -207,14 +232,14 @@ export class VideoController {
             }
         });
     }
-    
+
     pauseAll() {
         if (!this.masterVideo.paused) {
             this.masterVideo.pause();
         }
         this.pauseSlaves();
     }
-    
+
     resumeAll() {
         this.syncSlaves();
         if (this.masterVideo.paused && this.masterVideo.readyState >= 3) {
@@ -223,50 +248,56 @@ export class VideoController {
             });
         }
     }
-    
+
     checkAndResume() {
         if (!this.isLoading && this.isPlaying) {
             this.resumeAll();
         }
     }
-    
+
     // API pública
     play() {
+        //Checkear si el video ya llegó al final
+        if (this.masterVideo.currentTime >= this.videosMSEList[0].duration - 1 / this.fps) {
+            console.log('Video at end. You can seek to start again.');
+            this.emitEndVideo();
+            return;
+        }
         this.masterVideo.play().catch(err => {
             if (err.name !== 'AbortError') {
                 console.warn('Error playing master:', err);
             }
         });
     }
-    
+
     pause() {
         this.masterVideo.pause();
     }
-    
+
     seekTo(time) {
         this.masterVideo.currentTime = time;
     }
-    
+
     setPlaybackRate(rate) {
         this.masterVideo.playbackRate = rate;
     }
-    
+
     nextFrame() {
         this.masterVideo.currentTime += 1 / this.fps;
     }
-    
+
     prevFrame() {
         this.masterVideo.currentTime -= 1 / this.fps;
     }
-    
+
     getCurrentTime() {
         return this.masterVideo.currentTime;
     }
-    
+
     getDuration() {
         return this.masterVideo.duration;
     }
-   
+
     destroy() {
         if (this.syncInterval) {
             clearInterval(this.syncInterval);

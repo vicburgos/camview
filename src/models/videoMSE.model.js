@@ -1,3 +1,5 @@
+import { buildPlaceholder } from '../builders/placeholder.builder.js';
+
 export default class videoMSE {
   constructor({
     videoChunksList = [],
@@ -46,7 +48,7 @@ export default class videoMSE {
     this.playListURL = videoChunksList.map(v => v[this.metadata.urlKey || 'url']);
     
     // Calcular duracion total solo si hay mapping
-    this.totalVideoTime = this.metadata.mapping
+    this.duration = this.metadata.mapping
       ? videoChunksList.at(-1).timestampOffset + videoChunksList.at(-1).durationSeconds
       : null;
     
@@ -75,14 +77,15 @@ export default class videoMSE {
 
   async loadPlaceholder() {
     try {
-      const response = await fetch('/media/camview/placeholder-chunk.mp4');
-      this.placeholderBuffer = await response.arrayBuffer();
+      // const response = await fetch('/placeholder-black.mp4');
+      // this.placeholderBuffer = await response.arrayBuffer();
+      this.placeholderBuffer = buildPlaceholder();
     } catch (err) {
       console.warn('the chunk placeholder is not available:', err.message);
     }
   }
 
-  async generatePlaceholder(durationSeconds) {
+  async generatePlaceholder() {
     if (!this.placeholderBuffer) {
       console.warn('Chunk placeholder no available');
       return null;
@@ -133,6 +136,18 @@ export default class videoMSE {
     this.mediaSource = new MediaSource();
     this.video.src = URL.createObjectURL(this.mediaSource);
 
+    // Restriccion de currentTime en modo seek para no llegar al placeholder final
+    if (this.mode === 'seek' && this.duration) {
+      this.video.addEventListener('timeupdate', () => {
+        if (this.video.currentTime > this.duration - 2/this.metadata.fps) {
+          this.video.pause();
+          if (this.video.currentTime > this.duration - 1/this.metadata.fps){
+          this.video.currentTime = this.duration - 1/this.metadata.fps;
+          }
+        }
+      });
+    }
+
     this.mediaSource.addEventListener("sourceopen", () => {
       if (this.sourceBuffer) return;
 
@@ -140,8 +155,8 @@ export default class videoMSE {
       this.sourceBuffer.mode = "sequence";
 
       // Solo establecer duración si hay mapping
-      if (this.metadata.mapping && this.totalVideoTime) {
-        this.mediaSource.duration = this.totalVideoTime;
+      if (this.metadata.mapping && this.duration) {
+        this.mediaSource.duration = this.duration;
       }
       // Sin mapping, la duración será indefinida (Infinity)
 
@@ -206,8 +221,27 @@ export default class videoMSE {
         await this.appendBuffer(arrayBuffer);
         this.loadedChunks.add(chunkIndex);
 
+
+        // Agregar algunas copias de placeholder al final
         if (chunkIndex === this.videoChunksList.length - 1) {
-          this.mediaSource.endOfStream();
+          const placeholderBuffer = await this.generatePlaceholder();
+          if (placeholderBuffer) {
+            try {
+              const finalPlaceholderCopies = 20;
+              const lastChunkInfo = this.videoChunksList[chunkIndex];
+              const finalOffset = lastChunkInfo.timestampOffset + lastChunkInfo.durationSeconds;
+              
+              console.log(`Insertando placeholder final de ${finalPlaceholderCopies} copias`);
+              
+              for (let i = 0; i < finalPlaceholderCopies; i++) {
+                const offset = finalOffset + (i * this.placeholderDuration) - this.timeOffsetAdjustment;
+                this.sourceBuffer.timestampOffset = offset;
+                await this.appendBuffer(placeholderBuffer);
+              }
+            } catch (appendErr) {
+              console.error(`Error insertando placeholder final:`, appendErr.message);
+            }
+          }
         }
         
         // Limpiar buffer si está habilitado
@@ -220,7 +254,7 @@ export default class videoMSE {
           `Chunk ${chunkIndex} failed to load`);
         
         const chunkInfo = this.videoChunksList[chunkIndex];
-        const placeholderBuffer = await this.generatePlaceholder(chunkInfo.durationSeconds);
+        const placeholderBuffer = await this.generatePlaceholder();
         
         if (placeholderBuffer) {
           try {

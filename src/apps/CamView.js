@@ -6,24 +6,87 @@ import { fetchManifest } from "../services/fetch.service.js";
 import { buildConfig } from "../builders/config.builder.js";
 import videoMSE from "../models/videoMSE.model.js";
 import VideoView from "../views/VideoView.js";
-import InfoView from "../views/InfoView.js";
 import LoadingView from "../views/LoadingView.js";
 import TabPanel from "../views/TabPanel.js";
+import InfoView from "../views/InfoView.js";
 import FilterOptionsView from "../views/FilterOptionsView.js";
 
-export default async function App(camara, start, end, useUTC, debug, root) {
+
+export default async function CamView(container, options = {}) {
+
+    const defaultOptions = {
+        camID: null,
+        time: {
+            startUTC: null,
+            endUTC: null,
+            initialTimeUTC: null,
+        },
+        chart: {
+            useUTC: true,
+            defaultSeries: null,
+        },
+        settings: {
+            collapse: false,
+            color: {
+                active: false,
+                type: 'line', // 'line' o 'face'
+                opacity: 0.5,
+                levels: 10,
+                minLevel: 0,
+                maxLevel: 100,
+            },
+        },
+        debug: false,
+    };
+
+    // Fusionar opciones por defecto con las proporcionadas
+    const config = {
+        ...defaultOptions,
+        ...options,
+        time: { ...defaultOptions.time, ...options.time },
+        chart: { ...defaultOptions.chart, ...options.chart },
+        settings: {
+            ...defaultOptions.settings,
+            ...options.settings,
+            color: { ...defaultOptions.settings.color, ...options.settings?.color },
+        },
+    };
+
+    const { camID, time, chart, settings, debug } = config;
+
     /* 
       Arranque de la aplicación
     */
-    console.time("App initialization");
-    console.time("Fetching metadata");
+    console.time("CamView initialization");
+    
+    // Obtener o crear el elemento contenedor
+    const root = typeof container === 'string' 
+        ? document.getElementById(container) 
+        : container;
+    
+    if (!root) {
+        throw new Error(`Container element not found: ${container}`);
+    }
+    
+    // Mostrar vista de carga
     const loadingView = LoadingView();
     root.appendChild(loadingView.el);
-    const manifest = await fetchManifest(camara);
+    
+    // Obtener manifest y construir configuración
+    const manifest = await fetchManifest(camID);
+    
+    
+    const CONFIG = await buildConfig(
+        camID, 
+        time?.startUTC, 
+        time?.endUTC, 
+        chart?.useUTC, 
+        manifest,
+        time?.initialTimeUTC,
+        chart?.defaultSeries
+    );
     loadingView.destroy();
-    console.timeEnd("Fetching metadata");
-    const CONFIG = buildConfig(camara, start, end, useUTC, manifest);
-    console.timeEnd("App initialization");
+    console.timeEnd("CamView initialization");
 
     /*
       Layout
@@ -53,7 +116,6 @@ export default async function App(camara, start, end, useUTC, debug, root) {
         overflow: 'hidden',
         minWidth: '400px',
     });
-
     layout.appendChild(leftPanel);
 
     // Right panel para tabs
@@ -61,21 +123,18 @@ export default async function App(camara, start, end, useUTC, debug, root) {
     rightPanel.id = "right-panel";
     layout.appendChild(rightPanel);
 
-    root.appendChild(layout);
-
-    // Generamos ahora dos secciones sobre rigthPanel: Arriba Video (70%), abajo Grefico (30%)
-
+    // Contenedor de video
     const videoWrapper = document.createElement("div");
     videoWrapper.id = "video-wrapper";
     const videoWrapperHeight = 60;
     Object.assign(videoWrapper.style, {
         position: 'relative',
-        // height: `${videoWrapperHeight}%`,
         width: '100%',
         overflow: 'hidden',
     });
     leftPanel.appendChild(videoWrapper);
 
+    // Contenedor de gráfico
     const chartWrapper = document.createElement("div");
     chartWrapper.id = "chart";
     Object.assign(chartWrapper.style, {
@@ -120,13 +179,28 @@ export default async function App(camara, start, end, useUTC, debug, root) {
     // Conectar geometryController con chartController
     geometryController.setChartController(chartController);
 
-    // TODO:Para depuración
-    window.videoController = videoController;
-    window.canvasController = canvasController;
-    window.chartController = chartController;
-    window.geometryController = geometryController;
-
-    canvasController.setFilter(canvasController.baseFilter);
+    // Configurar filtro base con opciones de color
+    if (settings?.color?.active) {
+        const filterOptions = {
+            type: settings.color.type,
+            opacity: settings.color.opacity,
+            levels: settings.color.levels,
+            minLevel: settings.color.minLevel,
+            maxLevel: settings.color.maxLevel,
+            active: settings.color.active,
+        };
+        if (filterOptions.type=="line"){
+            canvasController.setFilter(canvasController.contourLineFilter, filterOptions);
+        }
+        else if (filterOptions.type=="face"){
+            canvasController.setFilter(canvasController.contourFaceFilter, filterOptions);
+        }
+        else {
+            canvasController.setFilter(canvasController.contourLineFilter, filterOptions);
+        }
+    } else {
+        canvasController.setFilter(canvasController.baseFilter);
+    }
 
     /*
       Vistas
@@ -140,7 +214,6 @@ export default async function App(camara, start, end, useUTC, debug, root) {
     videoWrapper.appendChild(videoView.el);
 
     // Loop de renderizado usando requestAnimationFrame para mejor performance
-    // Especialmente cuando Highcharts está renderizando (ej: navegando en el chart)
     let lastUpdateTime = 0;
     const targetFPS = 10;
     const frameInterval = 1000 / targetFPS;
@@ -152,8 +225,9 @@ export default async function App(camara, start, end, useUTC, debug, root) {
         }
         requestAnimationFrame(renderLoop);
     }
-    requestAnimationFrame(renderLoop);
-
+    videoINP.video.addEventListener('loadedmetadata', () => {
+        requestAnimationFrame(renderLoop);
+    });
 
     // En estado oculto
     const videoContainer = document.createElement('div');
@@ -190,6 +264,7 @@ export default async function App(camara, start, end, useUTC, debug, root) {
         videoContainer.style.width = '240px';
     }
 
+
     /*
       TabPanel - Panel lateral de configuración
     */
@@ -204,7 +279,7 @@ export default async function App(camara, start, end, useUTC, debug, root) {
             }
         ],
         active: 'setting',
-        collapsed: false,
+        collapsed: settings.collapse,
         maxWidth: 280,
         onChange: (tabId) => {
             console.log('Tab changed:', tabId);
@@ -213,7 +288,7 @@ export default async function App(camara, start, end, useUTC, debug, root) {
     rightPanel.appendChild(tabPanel.el);
 
     /*
-      Chart
+      Chart - Inicializar gráfico
     */
     chartController.initialize();
 
@@ -222,5 +297,33 @@ export default async function App(camara, start, end, useUTC, debug, root) {
         chartController.updateCursor(videoINP.video.currentTime);
     });
 
-}
+    // Configurar series por defecto si se proporcionan y fueron precalculadas
+    if (CONFIG.defaultSeriesData) {
+        const { x, y, data } = CONFIG.defaultSeriesData;
+        
+        // Agregar punto de geometría con datos precalculados cuando el video esté listo
+        videoINP.video.addEventListener('loadedmetadata', () => {
+            geometryController.addPoint(x, y, '#ff0000', data)
+                .catch(error => {
+                    console.error('Error loading default series:', error);
+                });
+        }, { once: true });
+    }
 
+    // Retornar objeto con referencias útiles
+    return {
+        videoController,
+        canvasController,
+        chartController,
+        geometryController,
+        destroy: () => {
+            // Cleanup
+            videoView.destroy?.();
+            filterOptionsView.destroy?.();
+            tabPanel.destroy?.();
+            videoINP.cleanup?.();
+            videoGS.cleanup?.();
+            root.innerHTML = '';
+        }
+    };
+}

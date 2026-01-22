@@ -16,21 +16,13 @@
   <script src="https://code.highcharts.com/stock/highstock.js"></script>
   <script src="https://code.highcharts.com/modules/boost.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
-  
+
   <!-- Source JS -->
   <script type="module" src="/src/main.js"></script>
 </head>
 
 <body>
-  <div
-    id="root-app"
-    class="wrapper"
-    cam-availables="CAM_FUCH_01 NIMCAM CAM_E04"
-    cam-availables-human="Fundición_Chuquicamata Rajo_Pelambres Estanque_Los_Bronces"
-    start-utc="2025-12-29T14:00:00Z" 
-    end-utc="2026-01-06T23:00:00Z"
-    debug="false"
-    style="
+  <div id="cam-view-container" style="
         width: 100vw;
         height: 100vh;
         margin: auto;
@@ -38,5 +30,41 @@
         border-radius: 5px;
       "></div>
 </body>
+  <script>
+    const config = {
+      camID: 'CAM_FUCH_01',
+      // camID: 'CAM_E04',
+      // camID: 'NIMCAM',
+      time: {
+        // startUTC:       "2026-01-01T14:00:00Z",
+        // endUTC:         "2026-01-20T23:00:00Z",
+        // initialTimeUTC: "2026-01-20T12:00:00Z",
+      },
+      settings: {
+        collapse: true,
+        color: {
+          active: true,
+          type: 'line',
+          opacity: 0.8,
+          levels: 8,
+          minLevel: 25,
+          maxLevel: 120,
+        }
+      },
+      chart: {
+        useUTC: false,
+        defaultSeries: {
+          x: 0.4,
+          y: 0.73
+        }
+      },
+      debug: false,
+    };
+    // Inicialize the CamView when the DOM is ready
+    async function run () {
+      await CamView('cam-view-container', config);
+    };
+    document.addEventListener('DOMContentLoaded', run);
 
+  </script>
 </html>

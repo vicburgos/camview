@@ -187,6 +187,32 @@ export default function VideoView({ canvasController, videoController, chartCont
         }
     });
 
+    videoController.onEndVideo(() => {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-info fade';
+        alertDiv.role = 'alert';
+        Object.assign(alertDiv.style, {
+            position: 'absolute',
+            top: '10px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: '20',
+        });
+        alertDiv.innerHTML = `
+            <strong>El video ha finalizado</strong> </br> Rebobine a un instante anterior para seguir reproduciendo
+        `;
+        container.appendChild(alertDiv);
+        
+        // Mostrar con fade
+        setTimeout(() => alertDiv.classList.add('show'), 10);
+        
+        // Ocultar después de 1.8 segundos
+        setTimeout(() => {
+            alertDiv.classList.remove('show');
+            setTimeout(() => container.removeChild(alertDiv), 150);
+        }, 1800);
+    });
+
     
     // Update
     function update() {

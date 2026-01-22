@@ -13,7 +13,8 @@ export class GeometryController {
         this.chartController = chartController;
     }
 
-    async addPoint(x, y, color = '#ff0000') {
+    async addPoint(x, y, color = '#ff0000', precalculatedData = null) {
+        console.log("Add point", x, y);
         if (this.isFetching) {
             console.log('Ya hay una carga en progreso, ignorando solicitud');
             return null;
@@ -22,20 +23,41 @@ export class GeometryController {
         this.isFetching = true;
         
         try {
+            // Limpiar todas las geometrías existentes (solo se permite una a la vez)
+            const existingGeometries = this.model.getAllGeometries();
+            for (const existingGeometry of existingGeometries) {
+                // Remover del chart primero
+                if (this.chartController) {
+                    this.chartController.removeSeries(existingGeometry.id);
+                }
+            }
+            // Limpiar el modelo
+            this.model.clear();
+            
             // Clamping para asegurar valores entre 0 y 1
             x = Math.max(0, Math.min(1, x));
             y = Math.max(0, Math.min(1, y));
 
             const geometry = this.model.addPoint(x, y, color);
             
-            // Marcar como pendiente el fetch
-            geometry.fetchPending = true;
-            
-            // Fetch series data
-            await this.fetchSeriesForGeometry(geometry);
-            
-            // Marcar como completado
-            geometry.fetchPending = false;
+            // Si hay datos precalculados, usarlos directamente
+            if (precalculatedData && precalculatedData.length > 0) {
+                this.model.setSeries(geometry.id, precalculatedData);
+                
+                // Actualizar chart directamente
+                if (this.chartController) {
+                    this.updateChartSeries(geometry);
+                }
+            } else {
+                // Marcar como pendiente el fetch
+                geometry.fetchPending = true;
+                
+                // Fetch series data
+                await this.fetchSeriesForGeometry(geometry);
+                
+                // Marcar como completado
+                geometry.fetchPending = false;
+            }
             
             return geometry;
         } finally {

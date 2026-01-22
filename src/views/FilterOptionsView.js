@@ -162,7 +162,7 @@ export default function FilterOptionsView({ canvasController }) {
             showBadge: false,
             items: [
                 { value: 'line', label: 'Línea' },
-                { value: 'face', label: 'Cara' }
+                { value: 'face', label: 'Interior' },
             ]
         }
     );

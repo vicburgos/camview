@@ -3,8 +3,11 @@
     Provides structured functions for building video player configuration
 */
 
+import { fetchSeries } from '../services/fetch.service.js';
+
 export function calculateTimestep(manifest) {
     const availableTimes = manifest.videos.map(v => v.times);
+    availableTimes.sort((a, b) => a[0] - b[0]); // Sort by first time
 
     const timestepBetweenAvailableTimes = [];
     
@@ -62,7 +65,25 @@ export function calculateDateRange(manifest, startDate, endDate) {
     }
 
     if (!firstUnixtime || !endUnixtime) {
-        throw new Error("No available video data in the specified date range.");
+        // Default to full range if not specified
+        endUnixtime = availableTimes[availableTimes.length - 1].slice(-1)[0] * 1000;
+    }
+    if (!firstUnixtime) {
+        firstUnixtime = endUnixtime - 7 * 24 * 60 * 60 * 1000;
+        // Ajustamos al mas cercano disponible
+        let nearestStart = null;
+        for (let i = 0; i < availableTimes.length; i++) {
+            const times = availableTimes[i];
+            for (let j = 0; j < times.length; j++) {
+                const timeUnix = times[j] * 1000;
+                if (timeUnix >= firstUnixtime) {
+                    if (!nearestStart || timeUnix < nearestStart) {
+                        nearestStart = times[0] * 1000;
+                    }
+                }
+            }
+        }
+        firstUnixtime = nearestStart ? nearestStart : availableTimes[0][0] * 1000;
     }
 
     return { firstUnixtime, endUnixtime };
@@ -216,11 +237,16 @@ export function buildVideotimeToChunkIndexMap(CONFIG) {
 
 /**
  * Main bootstrap function to initialize video player configuration
- * @param {HTMLElement} root - Root element with configuration attributes
+ * @param {string} camara - Camera ID
+ * @param {Date|number} start - Start date/timestamp
+ * @param {Date|number} end - End date/timestamp
+ * @param {boolean} useUTC - Whether to use UTC time
  * @param {Object} manifest - Video manifest data
+ * @param {Date|number|null} initialTimeUTC - Optional initial time in UTC (same format as start/end)
+ * @param {Object|null} defaultSeries - Optional default series {x, y} coordinates
  * @returns {Object} Complete CONFIG object
  */
-export function buildConfig(camara, start, end, useUTC, manifest) {
+export async function buildConfig(camara, start, end, useUTC, manifest, initialTimeUTC = null, defaultSeries = null) {
 
     const startDate = start ? new Date(start) : null;
     const endDate   = end   ? new Date(end)   : null;
@@ -228,9 +254,12 @@ export function buildConfig(camara, start, end, useUTC, manifest) {
     // Build initial config
     const CONFIG = {
         camara: camara,
-        useUTC: useUTC,
+        useUTC: useUTC || false,
         fps: manifest?.fps || 10,
         videoDuration: null,
+        initialTime: null,
+        initialtTimeIndex: null,
+        defaultSeriesData: null, // Para almacenar datos precalculados
 
         timestep: manifest?.timestep || calculateTimestep(manifest),
         firstUnixtime: null,
@@ -284,18 +313,31 @@ export function buildConfig(camara, start, end, useUTC, manifest) {
     CONFIG.totalVideoTime = (
         CONFIG.videoChunksList.at(-1).timestampOffset +
         CONFIG.videoChunksList.at(-1).durationSeconds
-
     );
 
-    // Configurar zoom inicial (últimas 10 horas por defecto) en unixtime
-    // 1 * 1 * 20 * 1000 little ajust for chart
-    CONFIG.zoomStart = CONFIG.endUnixtime - 11 * 60 * 60 * 1000 + 1 * 1 * 20 * 1000;
-    CONFIG.zoomEnd   = CONFIG.endUnixtime;
-    
-    // Calcular initialTime basado en el inicio del zoom
-    const xValueIndex = Math.floor((CONFIG.zoomStart - CONFIG.firstUnixtime) / CONFIG.timestep);
-    const currentTimeMs = CONFIG.unixtimeToVideotime[xValueIndex];
-    CONFIG.initialTime = currentTimeMs / 1000; // Convertir de ms a segundos
+    // Calcular initialTime
+    if (initialTimeUTC) {
+        // Si se proporciona initialTimeUTC, usarlo para calcular initialTime
+        const initialUnixtime = new Date(initialTimeUTC).getTime();
+        
+        // Asegurar que esté dentro del rango válido
+        const clampedInitialUnixtime = Math.max(
+            CONFIG.firstUnixtime,
+            Math.min(initialUnixtime, CONFIG.endUnixtime)
+        );
+        
+        const xValueIndex = Math.floor((clampedInitialUnixtime - CONFIG.firstUnixtime) / CONFIG.timestep);
+        const currentTimeMs = CONFIG.unixtimeToVideotime[xValueIndex];
+        CONFIG.initialTime = currentTimeMs / 1000;
+        CONFIG.initialtTimeIndex = Math.round(CONFIG.initialTime * CONFIG.fps);
+
+    } else {
+        // Si no se proporciona, usar CONFIG.endUnixtime como default
+        const xValueIndex = Math.floor((CONFIG.endUnixtime - CONFIG.firstUnixtime) / CONFIG.timestep);
+        const currentTimeMs = CONFIG.unixtimeToVideotime[xValueIndex];
+        CONFIG.initialTime = currentTimeMs / 1000;
+        CONFIG.initialtTimeIndex = Math.round(CONFIG.initialTime * CONFIG.fps);
+    }
 
     //Center per data day using videotimeToUnixtime
     let currentDay = null;
@@ -328,6 +370,48 @@ export function buildConfig(camara, start, end, useUTC, manifest) {
         const center = (dayStart + dayEnd) / 2;
         CONFIG.centerPerDataDay.push(center);
     }
+
+    // Precalcular serie por defecto si se proporciona
+    if (defaultSeries && defaultSeries.x !== null && defaultSeries.y !== null) {
+        try {
+            const seriesData = await fetchSeries(
+                camara,
+                defaultSeries.x,
+                defaultSeries.y,
+                startDate,
+                endDate
+            );
+            
+            if (seriesData && seriesData.data) {
+                // Filtrar datos entre firstUnixtime y endUnixtime
+                const filteredData = seriesData.data.filter(point => {
+                    const time = point[0];
+                    return time >= CONFIG.firstUnixtime && time <= CONFIG.endUnixtime;
+                });
+                
+                CONFIG.defaultSeriesData = {
+                    x: defaultSeries.x,
+                    y: defaultSeries.y,
+                    data: filteredData
+                };
+            }
+        } catch (error) {
+            console.error('Error precalculating default series:', error);
+        }
+    }
+
+    // Configurar zoom inicial CONFIG.zoomStart CONFIG.zoomEnd 12 hours de CONFIG.initialTime
+    const rangeMs = 12 * 60 * 60 * 1000; // 12 hours in ms
+    const countFrames = Math.floor(rangeMs / CONFIG.timestep);
+
+    CONFIG.initialtTimeIndex - Math.round(countFrames / 2) > 0
+        ? CONFIG.zoomStart = CONFIG.videotimeToUnixtime[CONFIG.initialtTimeIndex - Math.floor(countFrames / 2)]
+        : CONFIG.zoomStart = CONFIG.firstUnixtime;
+    CONFIG.initialtTimeIndex + Math.round(countFrames / 2) < CONFIG.videotimeToUnixtime.length
+        ? CONFIG.zoomEnd = CONFIG.videotimeToUnixtime[CONFIG.initialtTimeIndex + Math.ceil(countFrames / 2)]
+        : CONFIG.zoomEnd = CONFIG.endUnixtime;
+
+    console.log(CONFIG.firstUnixtime, CONFIG.endUnixtime, CONFIG.zoomStart);
     
     return CONFIG;
 }
