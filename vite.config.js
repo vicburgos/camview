@@ -10,8 +10,8 @@ export default defineConfig({
         visor: './index.html'
       },
       output: {
-        entryFileNames: 'static/main.js',
-        assetFileNames: 'static/main.css',
+        entryFileNames: 'static/main3.js',
+        assetFileNames: 'static/main3.css',
       }
     }
   },
