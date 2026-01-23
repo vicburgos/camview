@@ -609,10 +609,11 @@ const spanishMonth = [
   "dic"
 ];
 class ChartController {
-  constructor(config, videoController) {
+  constructor(config, videoController, chartWrapper) {
     this.config = config;
     this.videoController = videoController;
     this.chart = null;
+    this.chartWrapper = chartWrapper;
     this.cursorValue = null;
     this.BAND_COLOR_1 = "rgb(255, 255, 255)";
     this.BAND_COLOR_2 = "rgb(203, 236, 249)";
@@ -708,7 +709,7 @@ class ChartController {
         text: "1d"
       }
     ];
-    this.chart = Highcharts.stockChart("chart", {
+    this.chart = Highcharts.stockChart(this.chartWrapper, {
       boost: { seriesThreshold: 1, useGPUTranslations: true },
       rangeSelector: {
         inputEnabled: false,
@@ -877,7 +878,7 @@ class ChartController {
     let startY = 0;
     let isDragging = false;
     const DRAG_THRESHOLD = 4;
-    const wrapper = document.getElementById("chart");
+    const wrapper = this.chartWrapper;
     if (!wrapper) return;
     wrapper.addEventListener("pointerdown", (e) => {
       if (e.pointerType === "mouse" && e.button !== 0) return;
@@ -2252,7 +2253,7 @@ function LoadingView() {
     }
   };
 }
-function TabPanel(options = {}) {
+function TabPanel(container, options = {}) {
   var _a;
   const tabs = options.tabs || [];
   let activeTab = options.active || ((_a = tabs[0]) == null ? void 0 : _a.id);
@@ -2261,8 +2262,8 @@ function TabPanel(options = {}) {
   });
   const maxWidth = options.maxWidth || 350;
   const minWidth = options.minWidth || 16;
-  const container = document.createElement("div");
-  container.className = "tab-panel-container border-start bg-white";
+  const el = document.createElement("div");
+  el.className = "tab-panel-container border-start bg-white";
   const header = document.createElement("div");
   header.id = "tab-panel-header";
   header.style.width = `${maxWidth}px`;
@@ -2270,7 +2271,7 @@ function TabPanel(options = {}) {
   content.id = "tab-panel-content";
   content.style.width = `${maxWidth}px`;
   content.className = "content-panel flex-fill overflow-auto";
-  container.append(header, content);
+  el.append(header, content);
   const style = document.createElement("style");
   style.textContent = `
         .tab-panel-container {
@@ -2323,7 +2324,7 @@ function TabPanel(options = {}) {
     toggleBtn.onclick = toggle;
     wrapperHeader.appendChild(toggleBtn);
     window.addEventListener("resize", () => {
-      if (window.innerWidth < 800 && !collapsed) {
+      if (container.clientWidth < 600) {
         collapsed = true;
         renderHeader();
       }
@@ -2384,7 +2385,7 @@ function TabPanel(options = {}) {
   renderHeader();
   renderContent();
   return {
-    el: container,
+    el,
     setActive,
     toggle,
     update: () => {
@@ -2705,22 +2706,8 @@ async function App(camara, start, end, useUTC, debug, root2) {
     );
     videoContainer.style.width = "240px";
   }
-  const filterOptionsView = FilterOptionsView({ canvasController });
-  const tabPanel = TabPanel({
-    tabs: [
-      {
-        id: "setting",
-        label: "Configuración",
-        content: () => filterOptionsView
-      }
-    ],
-    active: "setting",
-    collapsed: false,
-    maxWidth: 280,
-    onChange: (tabId) => {
-      console.log("Tab changed:", tabId);
-    }
-  });
+  FilterOptionsView({ canvasController });
+  const tabPanel = TabPanel({});
   rightPanel.appendChild(tabPanel.el);
   chartController.initialize();
   videoINP.video.addEventListener("timeupdate", () => {
@@ -2786,7 +2773,7 @@ async function CamView(container, options = {}) {
   loadingView.destroy();
   console.timeEnd("CamView initialization");
   const layout = document.createElement("div");
-  layout.id = "layout";
+  layout.id = `layout-${camID}`;
   Object.assign(layout.style, {
     height: "100%",
     width: "100%",
@@ -2799,7 +2786,7 @@ async function CamView(container, options = {}) {
   });
   root2.appendChild(layout);
   const leftPanel = document.createElement("div");
-  leftPanel.id = "left-panel";
+  leftPanel.id = `left-panel-${camID}`;
   Object.assign(leftPanel.style, {
     height: "100%",
     display: "flex",
@@ -2810,10 +2797,10 @@ async function CamView(container, options = {}) {
   });
   layout.appendChild(leftPanel);
   const rightPanel = document.createElement("div");
-  rightPanel.id = "right-panel";
+  rightPanel.id = `right-panel-${camID}`;
   layout.appendChild(rightPanel);
   const videoWrapper = document.createElement("div");
-  videoWrapper.id = "video-wrapper";
+  videoWrapper.id = `video-wrapper-${camID}`;
   const videoWrapperHeight = 60;
   Object.assign(videoWrapper.style, {
     position: "relative",
@@ -2822,7 +2809,7 @@ async function CamView(container, options = {}) {
   });
   leftPanel.appendChild(videoWrapper);
   const chartWrapper = document.createElement("div");
-  chartWrapper.id = "chart";
+  chartWrapper.id = `chart-${camID}`;
   Object.assign(chartWrapper.style, {
     height: `${100 - videoWrapperHeight}%`,
     minHeight: "200px",
@@ -2850,7 +2837,7 @@ async function CamView(container, options = {}) {
   });
   const videoController = new VideoController([videoINP, videoGS]);
   const canvasController = new VideoCanvasController([videoINP, videoGS]);
-  const chartController = new ChartController(CONFIG, videoController);
+  const chartController = new ChartController(CONFIG, videoController, chartWrapper);
   const geometryController = new GeometryController(CONFIG);
   geometryController.setChartController(chartController);
   if ((_b = settings == null ? void 0 : settings.color) == null ? void 0 : _b.active) {
@@ -2923,7 +2910,7 @@ async function CamView(container, options = {}) {
     videoContainer.style.width = "240px";
   }
   const filterOptionsView = FilterOptionsView({ canvasController });
-  const tabPanel = TabPanel({
+  const tabPanel = TabPanel(layout, {
     tabs: [
       {
         id: "setting",

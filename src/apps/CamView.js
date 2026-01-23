@@ -92,7 +92,7 @@ export default async function CamView(container, options = {}) {
       Layout
     */
     const layout = document.createElement('div');
-    layout.id = 'layout';
+    layout.id = `layout-${camID}`;
     Object.assign(layout.style, {
         height: '100%',
         width: '100%',
@@ -107,7 +107,7 @@ export default async function CamView(container, options = {}) {
 
     // Left panel para el contenido principal
     const leftPanel = document.createElement("div");
-    leftPanel.id = "left-panel";
+    leftPanel.id = `left-panel-${camID}`;
     Object.assign(leftPanel.style, {
         height: '100%',
         display: 'flex',
@@ -120,12 +120,12 @@ export default async function CamView(container, options = {}) {
 
     // Right panel para tabs
     const rightPanel = document.createElement("div");
-    rightPanel.id = "right-panel";
+    rightPanel.id = `right-panel-${camID}`;
     layout.appendChild(rightPanel);
 
     // Contenedor de video
     const videoWrapper = document.createElement("div");
-    videoWrapper.id = "video-wrapper";
+    videoWrapper.id = `video-wrapper-${camID}`;
     const videoWrapperHeight = 60;
     Object.assign(videoWrapper.style, {
         position: 'relative',
@@ -136,7 +136,7 @@ export default async function CamView(container, options = {}) {
 
     // Contenedor de gráfico
     const chartWrapper = document.createElement("div");
-    chartWrapper.id = "chart";
+    chartWrapper.id = `chart-${camID}`;
     Object.assign(chartWrapper.style, {
         height: `${100 - videoWrapperHeight}%`,
         minHeight: '200px',
@@ -173,7 +173,7 @@ export default async function CamView(container, options = {}) {
     -------------------------------------*/
     const videoController = new VideoController([videoINP, videoGS]);
     const canvasController = new VideoCanvasController([videoINP, videoGS]);
-    const chartController = new ChartController(CONFIG, videoController);
+    const chartController = new ChartController(CONFIG, videoController, chartWrapper);
     const geometryController = new GeometryController(CONFIG);
 
     // Conectar geometryController con chartController
@@ -270,7 +270,7 @@ export default async function CamView(container, options = {}) {
     */
     const filterOptionsView = FilterOptionsView({ canvasController });
 
-    const tabPanel = TabPanel({
+    const tabPanel = TabPanel(layout, {
         tabs: [
             {
                 id: 'setting',

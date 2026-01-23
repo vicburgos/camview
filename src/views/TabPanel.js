@@ -1,6 +1,6 @@
 // TabPanel - Panel lateral con pestañas para configuración y opciones
 
-export default function TabPanel(options = {}) {
+export default function TabPanel(container, options = {}) {
     const tabs = options.tabs || [];
     let activeTab = options.active || tabs[0]?.id;
     let collapsed = options.collapsed ?? false;
@@ -9,8 +9,8 @@ export default function TabPanel(options = {}) {
     const minWidth = options.minWidth || 16;
 
     // Contenedor principal
-    const container = document.createElement("div");
-    container.className = "tab-panel-container border-start bg-white";
+    const el = document.createElement("div");
+    el.className = "tab-panel-container border-start bg-white";
 
     // Header
     const header = document.createElement("div");
@@ -23,7 +23,7 @@ export default function TabPanel(options = {}) {
     content.style.width = `${maxWidth}px`;
     content.className = "content-panel flex-fill overflow-auto";
 
-    container.append(header, content);
+    el.append(header, content);
 
     // Estilos
     const style = document.createElement('style');
@@ -86,7 +86,7 @@ export default function TabPanel(options = {}) {
 
         // Si la ventana es pequeña, hacer collapsable
         window.addEventListener('resize', () => {
-            if (window.innerWidth < 800 && !collapsed) {
+            if (container.clientWidth < 600) {
                 collapsed = true;
                 renderHeader();
             }
@@ -170,7 +170,7 @@ export default function TabPanel(options = {}) {
     renderContent();
 
     return {
-        el: container,
+        el: el,
         setActive,
         toggle,
         update: () => {

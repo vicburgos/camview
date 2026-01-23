@@ -6,10 +6,11 @@ const spanishMonth = [
 ];
 
 export class ChartController {
-    constructor(config, videoController) {
+    constructor(config, videoController, chartWrapper) {
         this.config = config;
         this.videoController = videoController;
         this.chart = null;
+        this.chartWrapper = chartWrapper;
         this.cursorValue = null;
 
         // Colores de las bandas de día
@@ -113,7 +114,7 @@ export class ChartController {
             }
         ];
 
-        this.chart = Highcharts.stockChart("chart", {
+        this.chart = Highcharts.stockChart(this.chartWrapper, {
             boost: { seriesThreshold: 1, useGPUTranslations: true },
             rangeSelector: {
                 inputEnabled: false,
@@ -296,7 +297,7 @@ export class ChartController {
         let isDragging = false;
         const DRAG_THRESHOLD = 4;
 
-        const wrapper = document.getElementById('chart');
+        const wrapper = this.chartWrapper;
         if (!wrapper) return;
 
         wrapper.addEventListener("pointerdown", e => {
