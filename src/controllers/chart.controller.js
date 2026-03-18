@@ -1,3 +1,4 @@
+import Highcharts from 'highcharts/highstock';
 
 const spanishMonth = [
     'ene', 'feb', 'mar', 'abr',
@@ -87,44 +88,12 @@ export class ChartController {
         };
 
         const plotBands = this.generateDayPlotBands();
-
-        Highcharts.setOptions({
-            lang: {
-                shortMonths: spanishMonth,
-                weekdays: [
-                    'domingo', 'lunes', 'martes', 'miércoles', 
-                    'jueves', 'viernes', 'sábado'
-                ],
-            },
-            time: { useUTC: CONFIG.useUTC },
-            chart: {
-                style: {
-                    fontFamily: 'Arial, sans-serif',
-                    fontSize: '12px'
-                }
-            }
-        });
-
-        const buttons = [
-            { type: 'all', text: 'Todo' },
-            {
-                type: 'hour',
-                count: Math.round((CONFIG.zoomEnd - CONFIG.zoomStart) / (1000 * 60 * 60)),
-                text: '1d'
-            }
-        ];
-
         this.chart = Highcharts.stockChart(this.chartWrapper, {
+            time: { useUTC: CONFIG.useUTC },
             boost: { seriesThreshold: 1, useGPUTranslations: true },
             rangeSelector: {
                 inputEnabled: false,
                 buttons: [],
-                // buttonTheme: { width: 30, height: 7 },
-                // buttonSpacing: 0,
-                // inputSpacing: 5,
-                // inputStyle: { fontSize: '8px' },
-                // verticalAlign: 'bottom',
-                // height: 10,
             },
             exporting: {
                 enabled: false,
@@ -133,7 +102,11 @@ export class ChartController {
                 spacingTop: 0,
                 spacingBottom: 0,
                 marginTop: 12,
-                marginBottom: 5
+                marginBottom: 5,
+                style: {
+                    fontFamily: 'Arial, sans-serif',
+                    fontSize: '12px'
+                }
             },
             xAxis: {
                 type: "datetime",
